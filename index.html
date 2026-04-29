@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-EMXFPPHQ7K"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-EMXFPPHQ7K');
-</script>
-  <head>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#681A89">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Zepto Rider Feedback</title>
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-EMXFPPHQ7K"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-EMXFPPHQ7K', {
+      // Don't send the riderId in the page URL to GA — it's PII-ish
+      page_location: window.location.origin + window.location.pathname
+    });
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -397,6 +400,21 @@
     var RIDER_ID = QUERY.riderId || '';
     var DEEPLINK_TYPE = QUERY.deeplinkType || '';
 
+    // ----- Analytics helper (no-op if gtag isn't loaded) -----
+    function track(eventName, params) {
+      try {
+        if (typeof gtag === 'function') {
+          gtag('event', eventName, params || {});
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // Funnel: page loaded
+    track('page_view_with_rider', {
+      has_rider_id: !!RIDER_ID,
+      deeplink_type: DEEPLINK_TYPE || 'direct'
+    });
+
     // ----- DOM helpers -----
     function el(tag, attrs, children) {
       var node = document.createElement(tag);
@@ -585,6 +603,7 @@
           $('r' + v).checked = true;
           currentRating = v;
           paintStars(v);
+          track('rating_selected', { rating: v, sentiment: v >= 4 ? 'positive' : 'negative' });
           setTimeout(function() {
             configureStep2(currentRating);
             showStep(2);
@@ -660,9 +679,13 @@
     function checkEligibility() {
       // GET /eligibility?riderId=...
       fetch(API_ENDPOINT + '?action=eligibility&riderId=' + encodeURIComponent(RIDER_ID), {
-        method: 'GET'
+        method: 'GET',
+        redirect: 'follow'
       })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function(data) {
           if (data && data.eligible === false && data.reason === 'already_submitted') {
             $('nextAvailableDate').textContent = data.nextAvailable || '';
@@ -671,8 +694,9 @@
             showStep(1);
           }
         })
-        .catch(function() {
+        .catch(function(err) {
           // Fail open — backend will still block on submit
+          console.error('Eligibility check failed:', err);
           showStep(1);
         });
     }
@@ -693,29 +717,53 @@
       };
 
       showStep('submitting');
+      track('submit_attempted', { rating: currentRating, tag_count: selectedTags.length });
 
       fetch(API_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain avoids CORS preflight
+        redirect: 'follow',
+        // text/plain avoids CORS preflight — the body is still JSON, parsed server-side
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + r.statusText);
+          return r.text().then(function(text) {
+            try { return JSON.parse(text); }
+            catch (e) { throw new Error('Invalid JSON response: ' + text.substring(0, 200)); }
+          });
+        })
         .then(function(data) {
           if (data && data.success) {
+            track('submit_success', {
+              rating: currentRating,
+              sentiment: currentRating >= 4 ? 'positive' : 'negative',
+              tag_count: selectedTags.length,
+              tags: selectedTags.join(','),
+              has_comment: !!($('comments').value || '').trim()
+            });
             showStep('success');
           } else if (data && data.alreadySubmitted) {
+            track('submit_blocked_duplicate');
             $('nextAvailableDate').textContent = data.nextAvailable || '';
             showStep('already-submitted');
           } else {
+            track('submit_error', { reason: (data && data.message) || 'unknown' });
             $('errorDetails').textContent = (data && data.message) || 'Unknown error.';
             showStep('error');
           }
         })
         .catch(function(err) {
-          $('errorDetails').textContent = (err && err.message) || String(err);
+          console.error('Submit failed:', err);
+          var msg = (err && err.message) || String(err);
+          track('submit_error', { reason: msg.substring(0, 100) });
+          // Helpful hint for common errors
+          if (msg.indexOf('Failed to fetch') !== -1) {
+            msg = 'Could not reach the server. Check your API_ENDPOINT in the HTML and that the Apps Script is deployed with "Anyone" access.';
+          }
+          $('errorDetails').textContent = msg;
           showStep('error');
         });
-      
     }
   </script>
 </body>
