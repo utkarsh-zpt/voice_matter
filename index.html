@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#681A89">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Zepto Rider Feedback</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --zepto-purple: #681A89;
+      --zepto-purple-dark: #4A1264;
+      --zepto-lavender: #CA8BD5;
+      --zepto-purple-glow: rgba(104, 26, 137, 0.25);
+      --zepto-purple-soft: rgba(104, 26, 137, 0.08);
+      --zepto-lavender-soft: rgba(202, 139, 213, 0.15);
+
+      --zepto-yellow: #FFD23F;
+      --success: #22C55E;
+      --danger: #ef4444;
+
+      --text: #1A1A2E;
+      --text-secondary: #5C5C6E;
+      --text-muted: #9999A8;
+      --border: #EAEAF0;
+      --border-hover: #D5D5DD;
+      --bg-base: #FFFFFF;
+      --bg-soft: #F8F7FB;
+      --bg-input: #F8F7FB;
+
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    html, body { height: 100%; overscroll-behavior: none; background: var(--bg-base); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      font-size: 16px;
+    }
+
+    .app {
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--bg-base);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    @media (min-width: 600px) {
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: linear-gradient(135deg, #2A0E3A 0%, #4A1264 100%);
+      }
+      .app {
+        max-width: 540px;
+        min-height: auto;
+        height: 92vh;
+        max-height: 820px;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(74, 18, 100, 0.4);
+        overflow: hidden;
+      }
+    }
+
+    .top-bar {
+      padding: calc(14px + var(--safe-top)) 20px 14px;
+      background: var(--bg-base);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .top-row { display: flex; justify-content: space-between; align-items: center; }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+
+    .brand-mark {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--zepto-purple) 0%, var(--zepto-lavender) 100%);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 900; font-size: 19px;
+      box-shadow: 0 4px 14px var(--zepto-purple-glow);
+      letter-spacing: -1px;
+    }
+
+    .brand-name { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.4px; }
+
+    .rider-tag {
+      font-size: 11px;
+      background: var(--zepto-purple-soft);
+      color: var(--zepto-purple);
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 24px 20px 12px;
+    }
+
+    .step { display: none; animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+    .step.active { display: block; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .greeting { text-align: center; margin-bottom: 24px; }
+    .greeting-emoji { font-size: 56px; display: block; margin-bottom: 16px; line-height: 1; }
+    .greeting-title { font-size: 26px; font-weight: 800; letter-spacing: -0.6px; margin-bottom: 10px; line-height: 1.2; }
+    .greeting-sub { font-size: 14px; color: var(--text-secondary); line-height: 1.5; max-width: 320px; margin: 0 auto; }
+
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin: 12px 0 14px;
+      padding: 24px 12px;
+      background: linear-gradient(135deg, var(--zepto-purple-soft), var(--zepto-lavender-soft));
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .stars input { display: none; }
+
+    .stars label {
+      font-size: 44px;
+      color: #DDD3E4;
+      cursor: pointer;
+      transition: transform 0.15s, color 0.2s, filter 0.2s;
+      user-select: none;
+      padding: 6px;
+      line-height: 1;
+    }
+
+    .stars label:active { transform: scale(1.25); }
+
+    .stars label.filled {
+      color: var(--zepto-yellow);
+      filter: drop-shadow(0 2px 8px rgba(255, 210, 63, 0.5));
+      animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+      100% { transform: scale(1); }
+    }
+
+    .stars-feedback { text-align: center; font-size: 17px; font-weight: 700; min-height: 26px; margin-bottom: 4px; }
+    .stars-hint { text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+
+    .step-2-header { margin-bottom: 20px; }
+
+    .rating-display {
+      background: linear-gradient(135deg, var(--zepto-purple-soft), var(--zepto-lavender-soft));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .rating-display-stars { display: flex; gap: 2px; flex-shrink: 0; }
+    .rating-display-star { font-size: 28px; line-height: 1; color: #DDD3E4; }
+    .rating-display-star.filled { color: var(--zepto-yellow); filter: drop-shadow(0 1px 4px rgba(255, 210, 63, 0.4)); }
+    .rating-display-text { flex: 1; min-width: 0; }
+    .rating-display-label { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; line-height: 1.2; margin-bottom: 2px; }
+    .rating-display-score { font-size: 12px; color: var(--zepto-purple); font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; }
+
+    .question-title { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; line-height: 1.3; margin-bottom: 4px; }
+    .question-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px; }
+
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+
+    .tag-chip { position: relative; cursor: pointer; }
+    .tag-chip input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
+
+    .tag-chip .chip-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 100px;
+      background: var(--bg-base);
+      transition: all 0.15s;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    .tag-chip:active .chip-inner { transform: scale(0.96); }
+
+    .tag-chip input:checked + .chip-inner {
+      border-color: var(--zepto-purple);
+      background: var(--zepto-purple);
+      color: white;
+    }
+
+    .tag-chip .chip-icon { font-size: 14px; line-height: 1; }
+    .tag-chip input:checked + .chip-inner .chip-icon::before { content: "✓"; font-weight: 700; }
+    .tag-chip input:checked + .chip-inner .chip-icon-emoji { display: none; }
+
+    .comments-block { margin-top: 18px; }
+    .comments-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600; }
+    .comments-label-icon { color: var(--zepto-purple); font-size: 15px; }
+
+    textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      font-size: 16px;
+      font-family: inherit;
+      resize: none;
+      min-height: 90px;
+      background: var(--bg-input);
+      color: var(--text);
+      -webkit-appearance: none;
+      transition: all 0.2s;
+      line-height: 1.5;
+    }
+    textarea::placeholder { color: var(--text-muted); }
+    textarea:focus { outline: none; border-color: var(--zepto-purple); background: var(--bg-base); box-shadow: 0 0 0 4px var(--zepto-purple-soft); }
+
+    .field-error { color: var(--danger); font-size: 13px; margin-top: 12px; font-weight: 500; display: none; text-align: center; }
+    .field-error.show { display: block; }
+
+    .nav-bar {
+      padding: 12px 20px calc(12px + var(--safe-bottom));
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-base);
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+    }
+
+    .btn {
+      padding: 16px 20px;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      min-height: 54px;
+      -webkit-appearance: none;
+      letter-spacing: 0.2px;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-back {
+      background: var(--bg-soft);
+      color: var(--text);
+      padding: 16px 18px;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: linear-gradient(135deg, var(--zepto-purple), var(--zepto-purple-dark));
+      color: white;
+      box-shadow: 0 4px 16px var(--zepto-purple-glow);
+    }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+    .state-screen { text-align: center; padding: 40px 20px; }
+    .state-icon { font-size: 76px; margin-bottom: 20px; display: block; line-height: 1; }
+    .state-title { font-size: 26px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.4px; }
+    .state-message { font-size: 15px; color: var(--text-secondary); line-height: 1.6; }
+
+    .error-state .state-title { color: var(--danger); }
+    .success-state .state-title { color: var(--success); }
+
+    .error-msg {
+      background: rgba(239, 68, 68, 0.08);
+      color: #b91c1c;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-top: 16px;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      text-align: left;
+      word-break: break-word;
+    }
+
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--zepto-purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .no-rider-screen {
+      padding: 40px 24px;
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- everything injected by JS based on URL params -->
+  </div>
+
+  <script>
+    // ====================================================================
+    // CONFIG — change this to point at your backend API endpoint
+    // ====================================================================
+    var API_ENDPOINT = 'https://script.google.com/a/macros/zepto.com/s/AKfycbw1OLbn-Ke38tS2Hej_c9NsX50_mN63bHZp7-oUKaefLLtwfmCurqIWOfiA6JBdPDmp/exec';
+    // If you use the Apps Script API option below, this becomes:
+    //   'https://script.google.com/macros/s/AKfycbXXXX/exec'
+    // If you use Cloud Run, it becomes something like:
+    //   'https://feedback-api-abc-uc.a.run.app/feedback'
+    // ====================================================================
+
+    var TAGS = [
+      { key: 'payouts', label: 'Payouts', icon: '💰' },
+      { key: 'zepto_support', label: 'Zepto Support', icon: '🆘' },
+      { key: 'surges_incentives', label: 'Surges & Incentives', icon: '⚡' },
+      { key: 'store_staff_behavior', label: 'Store Staff', icon: '🧑‍💼' },
+      { key: 'store_facilities', label: 'Store Facilities', icon: '🏪' },
+      { key: 'ratecard_clarity', label: 'Ratecard Clarity', icon: '📋' }
+    ];
+
+    var STAR_TEXTS = {
+      1: { label: 'Very Poor 😞', hint: "We're sorry. Tell us what went wrong." },
+      2: { label: 'Poor 😕', hint: 'We can do better. Help us improve.' },
+      3: { label: 'Average 😐', hint: 'Thanks. Let us know what to fix.' },
+      4: { label: 'Good 🙂', hint: 'Glad to hear! What worked well?' },
+      5: { label: 'Excellent 😍', hint: 'Awesome! What made it great?' }
+    };
+
+    // ----- Read URL params robustly (handles malformed URLs too) -----
+    function getQueryParams() {
+      var params = {};
+      var raw = window.location.search.substring(1); // strip the leading '?'
+      if (!raw) return params;
+
+      // Replace any stray '?' inside the query string with '&' first
+      raw = raw.replace(/\?/g, '&');
+
+      raw.split('&').forEach(function(pair) {
+        if (!pair) return;
+        var eq = pair.indexOf('=');
+        if (eq < 0) return;
+        var key = decodeURIComponent(pair.substring(0, eq));
+        var val = decodeURIComponent(pair.substring(eq + 1));
+        params[key] = val;
+      });
+      return params;
+    }
+
+    var QUERY = getQueryParams();
+    var RIDER_ID = QUERY.riderId || '';
+    var DEEPLINK_TYPE = QUERY.deeplinkType || '';
+
+    // ----- DOM helpers -----
+    function el(tag, attrs, children) {
+      var node = document.createElement(tag);
+      if (attrs) Object.keys(attrs).forEach(function(k) {
+        if (k === 'class') node.className = attrs[k];
+        else if (k === 'html') node.innerHTML = attrs[k];
+        else node.setAttribute(k, attrs[k]);
+      });
+      (children || []).forEach(function(c) {
+        if (typeof c === 'string') node.appendChild(document.createTextNode(c));
+        else if (c) node.appendChild(c);
+      });
+      return node;
+    }
+
+    var app = document.getElementById('app');
+
+    // ----- If no rider ID, show error and stop -----
+    if (!RIDER_ID) {
+      app.innerHTML = '' +
+        '<div class="no-rider-screen">' +
+          '<span class="state-icon">⚠️</span>' +
+          '<div class="state-title">Rider ID Missing</div>' +
+          '<p class="state-message">Please open this form using the link shared with you. The link contains your unique Rider ID.</p>' +
+        '</div>';
+    } else {
+      renderApp();
+    }
+
+    function renderApp() {
+      app.innerHTML = '' +
+        '<div class="top-bar">' +
+          '<div class="top-row">' +
+            '<div class="brand">' +
+              '<div class="brand-mark">Z</div>' +
+              '<div class="brand-name">Zepto</div>' +
+            '</div>' +
+            '<div class="rider-tag">ID: ' + escapeHtml(RIDER_ID) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="content" id="content">' +
+          // loading
+          '<div class="step active" data-step="loading">' +
+            '<div class="state-screen"><div class="spinner"></div><p class="state-message">Loading...</p></div>' +
+          '</div>' +
+          // step 1
+          '<div class="step" data-step="1">' +
+            '<div class="greeting">' +
+              '<span class="greeting-emoji">⚡</span>' +
+              '<h1 class="greeting-title">Your Voice Matters</h1>' +
+              '<p class="greeting-sub">Tap a star to rate your experience as a Zepto rider</p>' +
+            '</div>' +
+            '<div class="stars" id="starsRating">' +
+              [1,2,3,4,5].map(function(v) {
+                return '<input type="radio" id="r'+v+'" name="rating" value="'+v+'">' +
+                       '<label for="r'+v+'" data-value="'+v+'">★</label>';
+              }).join('') +
+            '</div>' +
+            '<div class="stars-feedback" id="starsFeedback">&nbsp;</div>' +
+            '<div class="stars-hint" id="starsHint">Tap a star to begin</div>' +
+          '</div>' +
+          // step 2
+          '<div class="step" data-step="2" id="step2">' +
+            '<div class="rating-display">' +
+              '<div class="rating-display-stars" id="ratingDisplayStars"></div>' +
+              '<div class="rating-display-text">' +
+                '<div class="rating-display-label" id="ratingDisplayLabel">Excellent</div>' +
+                '<div class="rating-display-score" id="ratingDisplayScore">5 out of 5</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="step-2-header">' +
+              '<h2 class="question-title" id="tagsQuestion">What went well?</h2>' +
+              '<p class="question-sub" id="tagsSubtext">Pick all that apply</p>' +
+            '</div>' +
+            '<div class="tags-wrap" id="tagsWrap"></div>' +
+            '<div class="comments-block">' +
+              '<div class="comments-label">' +
+                '<span class="comments-label-icon">✏️</span>' +
+                '<span id="commentsLabelText">Tell us more (optional)</span>' +
+              '</div>' +
+              '<textarea id="comments" placeholder="Type your feedback here..."></textarea>' +
+            '</div>' +
+            '<div class="field-error" id="tagsError">Please select at least one option</div>' +
+          '</div>' +
+          // already submitted
+          '<div class="step" data-step="already-submitted">' +
+            '<div class="state-screen">' +
+              '<span class="state-icon">📝</span>' +
+              '<div class="state-title">Already Submitted</div>' +
+              '<p class="state-message">' +
+                "You've already shared your feedback this week. Thanks for helping us improve!<br><br>" +
+                'You can share feedback again on <strong id="nextAvailableDate" style="color: var(--zepto-purple)"></strong>.' +
+              '</p>' +
+            '</div>' +
+          '</div>' +
+          // submitting
+          '<div class="step" data-step="submitting">' +
+            '<div class="state-screen"><div class="spinner"></div><div class="state-title">Submitting...</div><p class="state-message">Saving your feedback. Please wait.</p></div>' +
+          '</div>' +
+          // success
+          '<div class="step" data-step="success">' +
+            '<div class="state-screen success-state"><span class="state-icon">🎉</span><div class="state-title">Thank you!</div><p class="state-message">Your feedback has been recorded. It helps us serve you better, every day.</p></div>' +
+          '</div>' +
+          // error
+          '<div class="step" data-step="error">' +
+            '<div class="state-screen error-state"><span class="state-icon">😞</span><div class="state-title">Something went wrong</div><p class="state-message">We couldn\'t submit your feedback.</p><div class="error-msg" id="errorDetails"></div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="nav-bar" id="navBar" style="display:none">' +
+          '<button type="button" class="btn btn-back" id="btnBack" style="display:none">←</button>' +
+          '<button type="button" class="btn btn-primary" id="btnSubmit" style="display:none">Submit Feedback ✓</button>' +
+          '<button type="button" class="btn btn-primary" id="btnRetry" style="display:none">Try Again</button>' +
+        '</div>';
+
+      bindHandlers();
+      checkEligibility();
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+      });
+    }
+
+    var currentStep = 1;
+    var currentRating = 0;
+
+    function $(id) { return document.getElementById(id); }
+    function showStep(step) {
+      var steps = document.querySelectorAll('.step');
+      for (var i = 0; i < steps.length; i++) steps[i].classList.remove('active');
+      var target = document.querySelector('.step[data-step="' + step + '"]');
+      if (target) target.classList.add('active');
+      var content = $('content');
+      if (content) content.scrollTop = 0;
+
+      var navBar = $('navBar');
+      var btnBack = $('btnBack');
+      var btnSubmit = $('btnSubmit');
+      var btnRetry = $('btnRetry');
+
+      if (step === 1) {
+        currentStep = 1;
+        navBar.style.display = 'none';
+      } else if (step === 2) {
+        currentStep = 2;
+        btnBack.style.display = 'block';
+        btnSubmit.style.display = 'block';
+        btnRetry.style.display = 'none';
+        navBar.style.display = 'flex';
+      } else if (step === 'submitting' || step === 'success' || step === 'already-submitted' || step === 'loading') {
+        navBar.style.display = 'none';
+      } else if (step === 'error') {
+        navBar.style.display = 'flex';
+        btnBack.style.display = 'none';
+        btnSubmit.style.display = 'none';
+        btnRetry.style.display = 'block';
+      }
+    }
+
+    function bindHandlers() {
+      // Build tag chips
+      var tagsWrap = $('tagsWrap');
+      var html = '';
+      TAGS.forEach(function(tag) {
+        html += '<label class="tag-chip">' +
+          '<input type="checkbox" name="tag" value="' + tag.key + '">' +
+          '<span class="chip-inner">' +
+            '<span class="chip-icon"><span class="chip-icon-emoji">' + tag.icon + '</span></span>' +
+            '<span>' + tag.label + '</span>' +
+          '</span>' +
+        '</label>';
+      });
+      tagsWrap.innerHTML = html;
+
+      tagsWrap.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          if (getSelectedTags().length > 0) $('tagsError').classList.remove('show');
+        });
+      });
+
+      // Stars
+      document.querySelectorAll('#starsRating label').forEach(function(lbl) {
+        lbl.addEventListener('click', function() {
+          var v = parseInt(lbl.getAttribute('data-value'), 10);
+          $('r' + v).checked = true;
+          currentRating = v;
+          paintStars(v);
+          setTimeout(function() {
+            configureStep2(currentRating);
+            showStep(2);
+          }, 600);
+        });
+      });
+
+      // Buttons
+      $('btnBack').addEventListener('click', function() {
+        document.querySelectorAll('input[name="rating"]').forEach(function(r) { r.checked = false; });
+        currentRating = 0;
+        paintStars(0);
+        showStep(1);
+      });
+
+      $('btnSubmit').addEventListener('click', submitForm);
+      $('btnRetry').addEventListener('click', function() { showStep(currentStep); });
+
+      paintStars(0);
+    }
+
+    function getSelectedTags() {
+      var selected = [];
+      document.querySelectorAll('#tagsWrap input[type="checkbox"]:checked').forEach(function(cb) {
+        selected.push(cb.value);
+      });
+      return selected;
+    }
+
+    function paintStars(value) {
+      document.querySelectorAll('#starsRating label').forEach(function(lbl) {
+        var v = parseInt(lbl.getAttribute('data-value'), 10);
+        if (v <= value) lbl.classList.add('filled');
+        else lbl.classList.remove('filled');
+      });
+      if (value > 0) {
+        $('starsFeedback').textContent = STAR_TEXTS[value].label;
+        $('starsHint').textContent = STAR_TEXTS[value].hint;
+      } else {
+        $('starsFeedback').innerHTML = '&nbsp;';
+        $('starsHint').textContent = 'Tap a star to begin';
+      }
+    }
+
+    function configureStep2(rating) {
+      var starsHtml = '';
+      for (var i = 1; i <= 5; i++) {
+        starsHtml += '<span class="rating-display-star' + (i <= rating ? ' filled' : '') + '">★</span>';
+      }
+      $('ratingDisplayStars').innerHTML = starsHtml;
+
+      var labels = { 1: 'Very Poor', 2: 'Poor', 3: 'Average', 4: 'Good', 5: 'Excellent' };
+      $('ratingDisplayLabel').textContent = labels[rating] || '';
+      $('ratingDisplayScore').textContent = rating + ' out of 5';
+
+      var isPositive = rating >= 4;
+      if (isPositive) {
+        $('tagsQuestion').textContent = 'What went well?';
+        $('commentsLabelText').textContent = 'Tell us what you loved (optional)';
+        $('comments').placeholder = 'What made it great? Share details...';
+      } else {
+        $('tagsQuestion').textContent = 'What went wrong?';
+        $('commentsLabelText').textContent = 'Tell us more about the issue (optional)';
+        $('comments').placeholder = 'What can we improve? Share details...';
+      }
+
+      document.querySelectorAll('#tagsWrap input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+      $('comments').value = '';
+      $('tagsError').classList.remove('show');
+    }
+
+    // ----- API calls -----
+    function checkEligibility() {
+      // GET /eligibility?riderId=...
+      fetch(API_ENDPOINT + '?action=eligibility&riderId=' + encodeURIComponent(RIDER_ID), {
+        method: 'GET'
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.eligible === false && data.reason === 'already_submitted') {
+            $('nextAvailableDate').textContent = data.nextAvailable || '';
+            showStep('already-submitted');
+          } else {
+            showStep(1);
+          }
+        })
+        .catch(function() {
+          // Fail open — backend will still block on submit
+          showStep(1);
+        });
+    }
+
+    function submitForm() {
+      var selectedTags = getSelectedTags();
+      if (selectedTags.length === 0) {
+        $('tagsError').classList.add('show');
+        return;
+      }
+
+      var payload = {
+        riderId: RIDER_ID,
+        deeplinkType: DEEPLINK_TYPE,
+        rating: currentRating,
+        tags: selectedTags,
+        comments: $('comments').value
+      };
+
+      showStep('submitting');
+
+      fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain avoids CORS preflight
+        body: JSON.stringify(payload)
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.success) {
+            showStep('success');
+          } else if (data && data.alreadySubmitted) {
+            $('nextAvailableDate').textContent = data.nextAvailable || '';
+            showStep('already-submitted');
+          } else {
+            $('errorDetails').textContent = (data && data.message) || 'Unknown error.';
+            showStep('error');
+          }
+        })
+        .catch(function(err) {
+          $('errorDetails').textContent = (err && err.message) || String(err);
+          showStep('error');
+        });
+    }
+  </script>
+</body>
+</html>
