@@ -363,7 +363,10 @@
     // CONFIG — change this to point at your backend API endpoint
     // ====================================================================
     var API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxcGpWQ-2B_qBLSO7G3Gn6CnbgOAklGssHuXRKny5SbjiaxNcOOtBuwZ4izg-EVZA9I/exec';
-    var API_SECRET = 'UpprLlw8qyUc2H32kU2NyA'; // must match Code.gs
+    // If you use the Apps Script API option below, this becomes:
+    //   'https://script.google.com/macros/s/AKfycbXXXX/exec'
+    // If you use Cloud Run, it becomes something like:
+    //   'https://feedback-api-abc-uc.a.run.app/feedback'
     // ====================================================================
 
     var TAGS = [
@@ -720,8 +723,7 @@
         deeplinkType: DEEPLINK_TYPE,
         rating: currentRating,
         tags: selectedTags,
-        comments: $('comments').value,
-        secret: API_SECRET
+        comments: $('comments').value
       };
 
       showStep('submitting');
